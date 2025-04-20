@@ -1,0 +1,417 @@
+<!DOCTYPE html><html lang="en">  
+<head>
+  <meta charset="UTF-8" />
+  <title>SnapRush</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #f1f1f1;
+      text-align: center;
+      padding: 30px;
+    }
+    h1, h2 {
+      color: #00ffc8;
+    }
+    input[type="text"], input[type="password"] {
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      outline: none;
+      width: 220px;
+      background-color: #1e1e1e;
+      color: white;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      background-color: #00ffc8;
+      color: #121212;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #00cba0;
+    }
+    .game-section {
+      background-color: #1e1e1e;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px auto;
+      box-shadow: 0 0 10px #00ffc8;
+      max-width: 500px;
+    }
+    #countdown {
+      font-size: 40px;
+      color: #ff4d4d;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    #menuButton {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: #00ffc8;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-weight: bold;
+      z-index: 100;
+      display: none;
+    }
+    #dropdownMenu {
+      display: none;
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background-color: #1e1e1e;
+      border: 1px solid #00ffc8;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #00ffc8;
+      z-index: 101;
+      min-width: 180px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    #dropdownMenu button {
+      display: block;
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 12px;
+      color: white;
+      text-align: left;
+    }
+    #dropdownMenu button:hover {
+      background-color: #00ffc810;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <button id="menuButton" onclick="toggleMenu()">☰ Menu</button>
+  <div id="dropdownMenu">
+    <button onclick="goHome()">Home</button>
+    <button onclick="showSettings()">Account Settings</button>
+    <button onclick="startGame('remote')">Remote Challenges</button>
+    <button onclick="showLeaderboard()">Leaderboard</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div id="loginScreen">
+    <h1>SnapRush Login</h1>
+    <input type="text" id="usernameInput" placeholder="Enter your name" />
+    <br>
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div id="menuScreen" class="hidden">
+    <h1>Welcome to SnapRush</h1>
+    <div id="playerName"></div>
+
+    <div class="game-section">
+      <h2>Hourly Challenge</h2>
+      <div id="challenge">Loading...</div>
+      <div id="difficulty"></div>
+      <div id="countdown">--</div>
+      <div id="photoSection" style="display: none;">
+        <p>Upload photo as proof:</p>
+        <input type="file" id="photoInput" accept="image/*" />
+        <img id="photoPreview" />
+      </div>
+      <button id="completeBtn" onclick="completeChallenge()" disabled>Challenge Completed!</button>
+      <div id="result"></div>
+      <div id="score">Score: 0</div>
+    </div>
+
+    <div class="game-section">
+      <h2>Extra Games</h2>
+      <button onclick="alert('Coming Soon: Speed Snap - race to snap 3 objects in 1 minute!')">Speed Snap</button>
+      <button onclick="alert('Coming Soon: Mystery Snap - solve riddles to find the photo target!')">Mystery Snap</button>
+      <button onclick="alert('Coming Soon: Duo Snap - complete challenges with a friend!')">Duo Snap</button>
+    </div>
+  </div>
+
+  <div id="settingsScreen" class="hidden game-section">
+    <h2>Account Settings</h2>
+    <input type="text" id="newUsernameInput" placeholder="Change name" />
+    <button onclick="changeUsername()">Save</button>
+  </div>
+
+  <div id="remoteScreen" class="hidden game-section">
+    <h2>Remote Challenge</h2>
+    <button onclick="generateRemoteChallenge()">Get New Challenge</button>
+    <div id="remoteChallenge"></div>
+    <input type="file" id="remotePhotoInput" accept="image/*" />
+    <img id="remotePhotoPreview" style="max-width:200px;display:none;border-radius:10px;" />
+    <button onclick="completeRemoteChallenge()">Submit</button>
+    <div id="remoteResult"></div>
+    <div id="remoteScore">Score: 0</div>
+  </div>
+
+  <div id="leaderboardScreen" class="hidden game-section">
+    <h2>Leaderboard</h2>
+    <ol id="leaderboardList"></ol>
+  </div>
+
+  <script>
+    window.onload = function() {
+      // Laad de opgeslagen challenge
+      const storedChallenge = JSON.parse(localStorage.getItem("snaprush_activeChallenge"));
+      if (storedChallenge) {
+        activeChallenge = storedChallenge.text;
+        challengeTimestamp = storedChallenge.start;
+        startCountdown();  // Start de countdown opnieuw met de opgeslagen challenge
+      }
+
+      // Laad de score en andere gegevens zoals eerder beschreven
+      const storedScores = JSON.parse(localStorage.getItem("snaprush_scores"));
+      if (storedScores && storedScores[currentUser]) {
+        score = storedScores[currentUser];
+        document.getElementById("score").innerText = `Score: ${score}`;
+      }
+
+      // Zorg ervoor dat andere game-modus data geladen wordt als dat nodig is.
+    };
+
+    const challenges = [
+      "Take a photo with a statue", "High-five a stranger",
+      "Take a selfie at a bus stop", "Photograph a red car",
+      "Smile at someone and capture it"
+    ];
+    const remoteChallenges = [
+      "Take a picture of your shoes", "Snap something blue",
+      "Draw a smiley and photograph it", "Photo of your favorite snack",
+      "Snap your reflection", "Photograph something round"
+    ];
+
+    let currentUser = "", score = 0, remoteScore = 0;
+    let activeChallenge = null, countdownInterval = null, challengeTimestamp = null;
+
+    function login() {
+      const input = document.getElementById("usernameInput").value.trim();
+      if (input) {
+        currentUser = input;
+        document.getElementById("playerName").innerText = `Player: ${currentUser}`;
+        document.getElementById("loginScreen").classList.add("hidden");
+        document.getElementById("menuScreen").classList.remove("hidden");
+        document.getElementById("menuButton").style.display = "block";
+        updateLeaderboard();
+        checkNewChallenge();
+        setInterval(checkNewChallenge, 60000);
+      }
+    }
+
+    function logout() {
+      currentUser = "";
+      score = 0;
+      remoteScore = 0;
+      hideAllScreens();
+      document.getElementById("loginScreen").classList.remove("hidden");
+      document.getElementById("usernameInput").value = "";
+      document.getElementById("menuButton").style.display = "none";
+      document.getElementById("dropdownMenu").style.display = "none";
+    }
+
+    function toggleMenu() {
+      const menu = document.getElementById("dropdownMenu");
+      menu.style.display = menu.style.display === "block" ? "none" : "block";
+    }
+
+    function showSettings() {
+      hideAllScreens();
+      document.getElementById("settingsScreen").classList.remove("hidden");
+    }
+
+    function startGame(mode) {
+      hideAllScreens();
+      if (mode === 'remote') {
+        document.getElementById("remoteScreen").classList.remove("hidden");
+      }
+    }
+
+    function showLeaderboard() {
+      hideAllScreens();
+      document.getElementById("leaderboardScreen").classList.remove("hidden");
+    }
+
+    function changeUsername() {
+      const newName = document.getElementById("newUsernameInput").value.trim();
+      if (newName) {
+        const scores = JSON.parse(localStorage.getItem("snaprush_scores") || "{}");
+        scores[newName] = scores[currentUser] || 0;
+        delete scores[currentUser];
+        localStorage.setItem("snaprush_scores", JSON.stringify(scores));
+        currentUser = newName;
+        document.getElementById("playerName").innerText = `Player: ${currentUser}`;
+        updateLeaderboard();
+        alert("Username updated!");
+      }
+    }
+
+    function hideAllScreens() {
+      document.querySelectorAll(".game-section, #menuScreen, #settingsScreen, #remoteScreen, #leaderboardScreen")
+        .forEach(el => el.classList.add("hidden"));
+    }
+
+    function checkNewChallenge() {
+  const now = new Date();
+  const hour = now.getHours();
+  const stored = JSON.parse(localStorage.getItem("snaprush_activeChallenge") || "{}");
+  
+  if (!stored.hour || stored.hour !== hour) {
+    const newChallenge = challenges[Math.floor(Math.random() * challenges.length)];
+    activeChallenge = newChallenge;
+    challengeTimestamp = now.getTime();
+    
+    // Sla de challenge op in localStorage
+    localStorage.setItem("snaprush_activeChallenge", JSON.stringify({
+      hour,
+      text: newChallenge,
+      start: challengeTimestamp
+    }));
+    
+    startCountdown();  // Start de countdown met de nieuwe challenge
+  } else {
+      activeChallenge = stored.text;
+      challengeTimestamp = stored.start;
+      startCountdown();  // Start de countdown met de opgeslagen challenge
+    }
+  }
+  function startCountdown() {
+  // Toon de actieve challenge en start de countdown
+  document.getElementById("challenge").innerText = activeChallenge;
+  document.getElementById("difficulty").innerText = "You have 30 minutes!";
+  document.getElementById("photoSection").style.display = "block";
+  document.getElementById("completeBtn").disabled = false;
+  
+  clearInterval(countdownInterval);
+  countdownInterval = setInterval(() => {
+    const now = Date.now();
+    const elapsed = Math.floor((now - challengeTimestamp) / 1000);
+    const remaining = 1800 - elapsed;
+    
+    if (remaining <= 0) {
+      document.getElementById("countdown").innerText = "Time's up!";
+      clearInterval(countdownInterval);
+      document.getElementById("completeBtn").disabled = true;
+      return;
+    }
+    
+    const min = Math.floor(remaining / 60);
+    const sec = remaining % 60;
+    document.getElementById("countdown").innerText = `${min}:${sec.toString().padStart(2, '0')}`;
+  }, 1000);
+}
+
+    document.getElementById("photoInput").addEventListener("change", function () {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          document.getElementById("photoPreview").src = e.target.result;
+          document.getElementById("photoPreview").style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function completeChallenge() {
+      const now = Date.now();
+      if (now - challengeTimestamp <= 1800000) {
+        const file = document.getElementById("photoInput").files[0];
+        if (file) {
+          score += 5;
+          document.getElementById("score").innerText = `Score: ${score}`;
+          document.getElementById("result").innerText = `Completed in time! +5 points`;
+          document.getElementById("completeBtn").disabled = true;
+          document.getElementById("photoSection").style.display = "none";
+          saveScore();
+        } else {
+          alert("Please upload a photo as proof!");
+        }
+      } else {
+        document.getElementById("result").innerText = "Too late! Challenge expired.";
+        document.getElementById("completeBtn").disabled = true;
+      }
+    }
+
+    function generateRemoteChallenge() {
+      const challenge = remoteChallenges[Math.floor(Math.random() * remoteChallenges.length)];
+      document.getElementById("remoteChallenge").innerText = challenge;
+      document.getElementById("remoteResult").innerText = "";
+      document.getElementById("remotePhotoPreview").style.display = "none";
+    }
+
+    document.getElementById("remotePhotoInput").addEventListener("change", function () {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          document.getElementById("remotePhotoPreview").src = e.target.result;
+          document.getElementById("remotePhotoPreview").style.display = "block";
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function completeRemoteChallenge() {
+      const file = document.getElementById("remotePhotoInput").files[0];
+      if (file) {
+        remoteScore += 3;
+        document.getElementById("remoteScore").innerText = `Score: ${remoteScore}`;
+        document.getElementById("remoteResult").innerText = `Challenge completed! +3 points`;
+        saveScore();
+      } else {
+        alert("Please upload a photo as proof!");
+      }
+    }
+
+    function saveScore() {
+      const scores = JSON.parse(localStorage.getItem("snaprush_scores") || "{}");
+      const total = score + remoteScore;  // Stel dat 'score' en 'remoteScore' variabelen zijn die je score bijhouden.
+      
+      if (!scores[currentUser] || total > scores[currentUser]) {
+        scores[currentUser] = total;
+        localStorage.setItem("snaprush_scores", JSON.stringify(scores));
+        updateLeaderboard();  // Update de leaderboard, als je dat hebt.
+      }
+    }
+
+
+    function updateLeaderboard() {
+      const scores = JSON.parse(localStorage.getItem("snaprush_scores") || "{}");
+      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+      const list = document.getElementById("leaderboardList");
+      list.innerHTML = "";
+      for (const [name, sc] of sorted.slice(0, 10)) {
+        const li = document.createElement("li");
+        li.innerText = `${name}: ${sc} pts`;
+        list.appendChild(li);
+      }
+    }
+
+    function goHome() {
+      hideAllScreens();
+      document.getElementById("menuScreen").classList.remove("hidden");
+      document.getElementById("dropdownMenu").style.display = "none";
+    }
+
+  </script>
+</body>
+</html>
