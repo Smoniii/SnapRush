@@ -130,10 +130,12 @@
       <div id="challenge">Loading...</div>
       <div id="difficulty"></div>
       <div id="countdown">--</div>
-      <div id="photoSection" style="display: none;">
-        <p>Upload photo as proof:</p>
-        <input type="file" id="photoInput" accept="image/*" />
-        <img id="photoPreview" />
+      <div id="photo">
+        <input type="file" id="photoInput" accept="image/*" style="display:none;" />
+        <button id="takePhotoButton">Take Photo</button>
+        <video id="video" width="320" height="240" autoplay></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <img id="photoPreview" style="max-width:200px;display:none;border-radius:10px;" />
       </div>
       <button id="completeBtn" onclick="completeChallenge()" disabled>Challenge Completed!</button>
       <div id="result"></div>
@@ -191,14 +193,86 @@
     };
 
     const challenges = [
-      "Take a photo with a statue", "High-five a stranger",
-      "Take a selfie at a bus stop", "Photograph a red car",
-      "Smile at someone and capture it"
+      "Find a yellow object that isn't plastic",
+      "Take a photo of something that starts with the letter Z",
+      "Snap a reflection that's not in a mirror",
+      "Find a perfect circle in the wild",
+      "Photograph something that looks like a face (but isn't one)",
+      "Find three objects of the same color in a row",
+      "Take a photo of a shadow shaped like an animal",
+      "Snap something that could be mistaken for food but isn't",
+      "Find the number 7 in an unexpected place",
+      "Take a picture with exactly five different textures",
+      "Snap something that looks ancient",
+      "Find a crack, tear, or rip that looks artistic",
+      "Capture something mid-air",
+      "Take a picture of a hidden corner you've never noticed",
+      "Snap a photo of something older than you",
+      "Find something that looks like a letter of the alphabet",
+      "Capture an insect in motion",
+      "Snap something that tells a story without people in it",
+      "Take a picture of an intentional pattern in nature",
+      "Find a weird combination of two random things",
+      "Photograph something completely out of place",
+      "Snap a close-up so intense it's hard to guess what it is",
+      "Take a photo through something transparent",
+      "Find a plant growing where it shouldn't be",
+      "Snap a moment of symmetry",
+      "Take a picture of a door that looks mysterious",
+      "Find two objects that don't belong together—but look perfect",
+      "Snap something that feels like the past",
+      "Capture something that moves and leaves a trail",
+      "Take a photo of something that makes noise—but silently",
+      "Find a number that's missing a part (like a broken house number)",
+      "Snap something that looks expensive but isn't",
+      "Photograph something with hidden text or writing",
+      "Take a picture with only one color dominating",
+      "Find an object with an unexpected shadow",
+      "Snap a picture from an unusual angle (super low or high)",
+      "Take a photo of something with 90° angles only",
+      "Find a naturally heart-shaped object",
+      "Capture a moment that feels like déjà vu"
     ];
     const remoteChallenges = [
-      "Take a picture of your shoes", "Snap something blue",
-      "Draw a smiley and photograph it", "Photo of your favorite snack",
-      "Snap your reflection", "Photograph something round"
+      "Take a photo of your shoe in a weird location",
+      "Snap your reflection in something unusual",
+      "Take a picture of your hand doing a random gesture",
+      "Make a creative tower with objects near you",
+      "Take a selfie with something balanced on your head",
+      "Recreate a famous movie scene using stuff around you",
+      "Take a photo of your breakfast/lunch but make it dramatic",
+      "Draw a quick doodle on paper and photograph it",
+      "Make a face using only objects (no actual face!)",
+      "Take a photo of your sock like it’s in a fashion ad",
+      "Find or make something spooky with a flashlight",
+      "Write one word with objects and snap it",
+      "Make a weird shape with your body and take a pic",
+      "Snap a photo of a book or object pretending it’s a phone",
+      "Take a picture of something tiny, zoomed in",
+      "Find a super satisfying color combo around you",
+      "Create a secret hiding spot and show it off (not revealing the location)",
+      "Take a photo of your shadow doing something cool",
+      "Make your hand look like something else (claw, puppet, etc.)",
+      "Take a photo of your eye with a reflection in it",
+      "Create an abstract photo that no one can guess",
+      "Photograph the weirdest thing near you upside down",
+      "Write a secret message on your hand and snap it",
+      "Stack 5+ items that shouldn’t be stacked",
+      "Take a photo where something looks like it's floating",
+      "Use perspective to make something look giant or tiny",
+      "Pose like a statue and take a self-timer photo",
+      "Snap a photo of your current view but make it artsy",
+      "Fold something weird out of paper and capture it",
+      "Make a mini scene (battle, dinner, etc.) using small objects",
+      "Take a picture of a color gradient you find or create",
+      "Make your face look like an emoji and snap it",
+      "Hide an object in plain sight and take a pic",
+      "Take a photo that makes no sense on purpose",
+      "Snap something that looks like it belongs in a museum",
+      "Recreate a famous logo with whatever you can find",
+      "Take a photo from the floor looking up",
+      "Make a creature out of random items and capture it",
+      "Write one random word and take a mysterious pic of it"
     ];
 
     let currentUser = "", score = 0, remoteScore = 0;
@@ -417,6 +491,45 @@
         list.appendChild(li);
       }
     }
+
+    // To capture the photo from the user's camera
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const photoPreview = document.getElementById('photoPreview');
+const takePhotoButton = document.getElementById('takePhotoButton');
+const photoInput = document.getElementById('photoInput');
+
+  // Access the user's camera
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(function(stream) {
+      video.srcObject = stream;
+    })
+    .catch(function(error) {
+      console.log("Error accessing camera: ", error);
+    });
+
+  // Take a photo
+  takePhotoButton.addEventListener('click', function() {
+    // Draw the current video frame to the canvas
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert the image to a data URL and show it in the preview
+    const photoData = canvas.toDataURL('image/png');
+    photoPreview.src = photoData;
+    photoPreview.style.display = 'block';
+
+    // Here you can also set the photo input to be the photoData if needed
+    // photoInput.value = photoData;
+  });
+
+  // Optional: Stop video stream when user leaves the page
+  window.onbeforeunload = function() {
+    const stream = video.srcObject;
+    const tracks = stream.getTracks();
+    tracks.forEach(track => track.stop());
+  };
+
 
   </script>
 </body>
