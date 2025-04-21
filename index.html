@@ -140,7 +140,7 @@
         <video id="cameraStream" autoplay playsinline style="display: none;" width="300"></video>
         <canvas id="cameraCanvas" style="display: none;"></canvas>
         <br>
-        <button id="snapButton" style="display: none;">Take Picture</button>
+        <button id="snapButton" style="display: none;">Take picture</button>
         <img id="cameraPreview" style="display: none;">
       </div>
       <button id="completeBtn" onclick="completeChallenge()" disabled>Challenge Completed!</button>
@@ -498,7 +498,6 @@
       }
     }
 
-    // To capture the photo from the user's camera
     const video = document.getElementById('cameraStream');
     const canvas = document.getElementById('cameraCanvas');
     const snapButton = document.getElementById('snapButton');
@@ -508,20 +507,18 @@
     let stream;
 
     startCameraButton.onclick = async () => {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } }
-          });
-          video.srcObject = stream;
-          video.style.display = 'block';
-          snapButton.style.display = 'inline';
-          startCameraButton.style.display = 'none';
-        } catch (err) {
-          alert("Kan camera niet openen: " + err.message);
-        }
-      } else {
-        alert("Camera niet ondersteund op dit apparaat.");
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: 'environment' } },
+          audio: false
+        });
+        video.srcObject = stream;
+        video.style.display = 'block';
+        snapButton.style.display = 'inline';
+        startCameraButton.style.display = 'none';
+      } catch (err) {
+        console.error("Fout bij openen van camera:", err);
+        alert("Camera kon niet geopend worden: " + err.message);
       }
     };
 
