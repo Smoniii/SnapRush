@@ -102,6 +102,10 @@
     .hidden {
       display: none;
     }
+    video, img {
+      max-width: 100%;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -131,11 +135,13 @@
       <div id="difficulty"></div>
       <div id="countdown">--</div>
       <div id="photo">
-        <input type="file" id="photoInput" accept="image/*" style="display:none;" />
-        <button id="takePhotoButton">Take Photo</button>
-        <video id="video" width="320" height="240" autoplay></video>
-        <canvas id="canvas" style="display:none;"></canvas>
-        <img id="photoPreview" style="max-width:200px;display:none;border-radius:10px;" />
+        <h2>Take a picture for proof:</h2>
+        <button id="startCameraButton">Camera</button><br>
+        <video id="cameraStream" autoplay playsinline style="display: none;" width="300"></video>
+        <canvas id="cameraCanvas" style="display: none;"></canvas>
+        <br>
+        <button id="snapButton" style="display: none;">Take Picture</button>
+        <img id="cameraPreview" style="display: none;">
       </div>
       <button id="completeBtn" onclick="completeChallenge()" disabled>Challenge Completed!</button>
       <div id="result"></div>
@@ -493,44 +499,41 @@
     }
 
     // To capture the photo from the user's camera
-const video = document.getElementById('video');
-const canvas = document.getElementById('canvas');
-const photoPreview = document.getElementById('photoPreview');
-const takePhotoButton = document.getElementById('takePhotoButton');
-const photoInput = document.getElementById('photoInput');
+    const video = document.getElementById('cameraStream');
+    const canvas = document.getElementById('cameraCanvas');
+    const snapButton = document.getElementById('snapButton');
+    const startCameraButton = document.getElementById('startCameraButton');
+    const preview = document.getElementById('cameraPreview');
 
-  // Access the user's camera
-  navigator.mediaDevices.getUserMedia({ video: true })
-    .then(function(stream) {
-      video.srcObject = stream;
-    })
-    .catch(function(error) {
-      console.log("Error accessing camera: ", error);
-    });
+    let stream;
 
-  // Take a photo
-  takePhotoButton.addEventListener('click', function() {
-    // Draw the current video frame to the canvas
-    const context = canvas.getContext('2d');
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    startCameraButton.onclick = async () => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } }
+          });
+          video.srcObject = stream;
+          video.style.display = 'block';
+          snapButton.style.display = 'inline';
+          startCameraButton.style.display = 'none';
+        } catch (err) {
+          alert("Kan camera niet openen: " + err.message);
+        }
+      } else {
+        alert("Camera niet ondersteund op dit apparaat.");
+      }
+    };
 
-    // Convert the image to a data URL and show it in the preview
-    const photoData = canvas.toDataURL('image/png');
-    photoPreview.src = photoData;
-    photoPreview.style.display = 'block';
-
-    // Here you can also set the photo input to be the photoData if needed
-    // photoInput.value = photoData;
-  });
-
-  // Optional: Stop video stream when user leaves the page
-  window.onbeforeunload = function() {
-    const stream = video.srcObject;
-    const tracks = stream.getTracks();
-    tracks.forEach(track => track.stop());
-  };
-
-
+    snapButton.onclick = () => {
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/png');
+      preview.src = dataUrl;
+      preview.style.display = 'block';
+    };
   </script>
 </body>
 </html>
