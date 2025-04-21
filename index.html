@@ -25,9 +25,10 @@
       margin-bottom: 10px;
     }
     button {
+      display: block;
       padding: 10px 20px;
       font-size: 18px;
-      margin: 10px;
+      margin: 10px auto 10px auto;
       border: none;
       border-radius: 8px;
       background-color: #00ffc8;
@@ -124,7 +125,7 @@
     <h1>Welcome to SnapRush</h1>
     <div id="playerName"></div>
 
-    <div class="game-section">
+    <div id="menuScreen" class="game-section">
       <h2>Hourly Challenge</h2>
       <div id="challenge">Loading...</div>
       <div id="difficulty"></div>
@@ -139,7 +140,7 @@
       <div id="score">Score: 0</div>
     </div>
 
-    <div class="game-section">
+    <div id="menuScreen" class="game-section">
       <h2>Extra Games</h2>
       <button onclick="alert('Coming Soon: Speed Snap - race to snap 3 objects in 1 minute!')">Speed Snap</button>
       <button onclick="alert('Coming Soon: Mystery Snap - solve riddles to find the photo target!')">Mystery Snap</button>
@@ -203,6 +204,15 @@
     let currentUser = "", score = 0, remoteScore = 0;
     let activeChallenge = null, countdownInterval = null, challengeTimestamp = null;
 
+    function hideAllScreens() {
+      document.querySelectorAll("#settingsScreen, #remoteScreen, #leaderboardScreen")
+        .forEach(el => el.classList.add("hidden"));
+    }
+
+    function hideMainScreen() {
+      document.getElementById("menuScreen").classList.add("hidden");
+    }
+
     function login() {
       const input = document.getElementById("usernameInput").value.trim();
       if (input) {
@@ -235,11 +245,13 @@
 
     function showSettings() {
       hideAllScreens();
+      hideMainScreen();
       document.getElementById("settingsScreen").classList.remove("hidden");
     }
 
     function startGame(mode) {
       hideAllScreens();
+      hideMainScreen();
       if (mode === 'remote') {
         document.getElementById("remoteScreen").classList.remove("hidden");
       }
@@ -247,6 +259,7 @@
 
     function showLeaderboard() {
       hideAllScreens();
+      hideMainScreen();
       document.getElementById("leaderboardScreen").classList.remove("hidden");
     }
 
@@ -264,60 +277,59 @@
       }
     }
 
-    function hideAllScreens() {
-      document.querySelectorAll(".game-section, #menuScreen, #settingsScreen, #remoteScreen, #leaderboardScreen")
-        .forEach(el => el.classList.add("hidden"));
+    function goHome() {
+      hideAllScreens();
+      document.getElementById("menuScreen").classList.remove("hidden");
+      document.getElementById("dropdownMenu").style.display = "none";
     }
 
     function checkNewChallenge() {
-  const now = new Date();
-  const hour = now.getHours();
-  const stored = JSON.parse(localStorage.getItem("snaprush_activeChallenge") || "{}");
-  
-  if (!stored.hour || stored.hour !== hour) {
-    const newChallenge = challenges[Math.floor(Math.random() * challenges.length)];
-    activeChallenge = newChallenge;
-    challengeTimestamp = now.getTime();
-    
-    // Sla de challenge op in localStorage
-    localStorage.setItem("snaprush_activeChallenge", JSON.stringify({
-      hour,
-      text: newChallenge,
-      start: challengeTimestamp
-    }));
-    
-    startCountdown();  // Start de countdown met de nieuwe challenge
-  } else {
-      activeChallenge = stored.text;
-      challengeTimestamp = stored.start;
-      startCountdown();  // Start de countdown met de opgeslagen challenge
+      const now = new Date();
+      const hour = now.getUTCHours(); // Gebruik UTC tijd
+      const stored = JSON.parse(localStorage.getItem("snaprush_activeChallenge") || "{}");
+
+      if (!stored.hour || stored.hour !== hour) {
+        const newChallenge = challenges[Math.floor(Math.random() * challenges.length)];
+        activeChallenge = newChallenge;
+        challengeTimestamp = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours(), 0, 0); // exact begin van het uur
+
+        localStorage.setItem("snaprush_activeChallenge", JSON.stringify({
+          hour,
+          text: newChallenge
+        }));
+
+        startCountdown();
+      } else {
+        activeChallenge = stored.text;
+        challengeTimestamp = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour, 0, 0);
+        startCountdown();
+      }
     }
-  }
-  function startCountdown() {
-  // Toon de actieve challenge en start de countdown
-  document.getElementById("challenge").innerText = activeChallenge;
-  document.getElementById("difficulty").innerText = "You have 30 minutes!";
-  document.getElementById("photoSection").style.display = "block";
-  document.getElementById("completeBtn").disabled = false;
-  
-  clearInterval(countdownInterval);
-  countdownInterval = setInterval(() => {
-    const now = Date.now();
-    const elapsed = Math.floor((now - challengeTimestamp) / 1000);
-    const remaining = 1800 - elapsed;
-    
-    if (remaining <= 0) {
-      document.getElementById("countdown").innerText = "Time's up!";
+
+    function startCountdown() {
+      document.getElementById("challenge").innerText = activeChallenge;
+      document.getElementById("difficulty").innerText = "You have 30 minutes!";
+      document.getElementById("photoSection").style.display = "block";
+      document.getElementById("completeBtn").disabled = false;
+
       clearInterval(countdownInterval);
-      document.getElementById("completeBtn").disabled = true;
-      return;
+      countdownInterval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = Math.floor((now - challengeTimestamp) / 1000);
+        const remaining = 1800 - elapsed;
+
+        if (remaining <= 0) {
+          document.getElementById("countdown").innerText = "Time's up!";
+          clearInterval(countdownInterval);
+          document.getElementById("completeBtn").disabled = true;
+          return;
+        }
+
+        const min = Math.floor(remaining / 60);
+        const sec = remaining % 60;
+        document.getElementById("countdown").innerText = `${min}:${sec.toString().padStart(2, '0')}`;
+      }, 1000);
     }
-    
-    const min = Math.floor(remaining / 60);
-    const sec = remaining % 60;
-    document.getElementById("countdown").innerText = `${min}:${sec.toString().padStart(2, '0')}`;
-  }, 1000);
-}
 
     document.getElementById("photoInput").addEventListener("change", function () {
       const file = this.files[0];
@@ -404,12 +416,6 @@
         li.innerText = `${name}: ${sc} pts`;
         list.appendChild(li);
       }
-    }
-
-    function goHome() {
-      hideAllScreens();
-      document.getElementById("menuScreen").classList.remove("hidden");
-      document.getElementById("dropdownMenu").style.display = "none";
     }
 
   </script>
